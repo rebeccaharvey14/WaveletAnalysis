@@ -1,6 +1,3 @@
-# FINDS CONTOURS OF SPECTROGRAMS AND IDENTIFIES DURATION & PARAMETERS OF EVENTS
-
-import os
 import sys
 import datetime
 import matplotlib
@@ -12,63 +9,18 @@ from my_functions import find_nearest
 from helicity_calculations import helicity
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
-####################### User defined module #######################
-def get_variables(filename, rtn=True):
-	df = pd.read_pickle(filename)
-	dj = 0.125
-	Np = df.Np.values
-	Bmag = df.Bmag.values
-	Tp = df.Tp.values
-	Te = df.Te.values
-	Time = df.index
-	Vmag = df.Vmag.values
-	beta = df.beta.values
-
-	dt = Time[1]-Time[0]
-	dt = dt.seconds + dt.microseconds*1e-6
-
-	if 'rtn':
-		Br = -df.Bx.values
-		Bt = -df.By.values
-		Bn = df.Bz.values
-		Vr = -df.Vx.values
-		Vt = -df.Vy.values
-		Vn = df.Vz.values
-		return Br, Bt, Bn, Vr, Vt, Vn, Np, Bmag, Vmag, Tp, Te, beta, Time, dj, dt
-	else:
-		Bx = df.Bx.values
-		By = df.By.values
-		Bz = df.Bz.values
-		Vx = df.Vx.values
-		Vy = df.Vy.values
-		Vz = df.Vz.values
-		return Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, Vmag, Tp, Te, beta, Time, dj, dt
-
-def nan_checker(array):
-	idx_nans = np.where(np.isnan(array)==True)[0]
-	return idx_nans.size/array.size
-
-def gap_checker(array,idx1,idx2,dt):
-	if idx2 == array.size or idx2>(array.size-20):
-		idx2 = array.size-1
-	elif (array[idx2]-array[idx1]) > datetime.timedelta(seconds=3600*3):
-		while (array[idx2]-array[idx1]) > datetime.timedelta(seconds=3600*3):
-			idx2 -= 1
-		if idx1 == idx2 or idx2-idx1==1: # if there no points
-			idx1 = idx2 + 600
-			idx2 = idx1 + 2400
-	return idx1,idx2
+from functions import nan_checker, gap_checker, get_variables
 ###########################################################################
 
 # READ IN DATA
 namestr = sys.argv[1]
 probe = sys.argv[2]
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
-datafile = '/home/rharvey/data/preprocessed/' + 'DataFrame_THM' + probe.upper() + namestr + '.csv'
+dataFile = '/home/rharvey/data/' + 'data_THM' + probe.upper() + namestr + '.csv'
 eventFile = rootDir + 'themis_events/' + namestr[:-1] + '_THM' + probe.upper() + '.csv'
 
-Br, Bt, Bn, Vr, Vt, Vn, Np, Bmag, Vmag, Tp, Te, beta, Time, dj, dt = get_variables(datafile,rtn=True)
-epoch = ((Time-pd.Timestamp('1970-01-01')) // pd.Timedelta('1s')).values
+Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, bmag, Vmag, Tp, Te, beta, Time, dt = get_variables(dataFile,time_range)
+epoch = ((Time-pd.Timestamp('1970-01-01 00:00:00.0000')) / pd.Timedelta('1s')).values
 Time = np.array([datetime.datetime.utcfromtimestamp(t) for t in epoch])
 
 cols = ['start', 'end', 'duration', 'B_avg', 'B_max', 'beta_avg', 'V_avg', 'T_avg', 'Np_avg', 'scale_length', 'peak_time', 'sigm', 'sigc', 'sigr']
@@ -88,7 +40,7 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 		idx_nans_Np = np.where(np.isnan(Np[idx1:idx2])==True)[0]
 
 		# CALCULATE MAGNETIC HELICITY, CROSS HELICITY, AND RESIDUAL ENERGY
-		scale, coi, sig_m, sig_c, sig_r = helicity(Br[idx1:idx2], Bt[idx1:idx2], Bn[idx1:idx2], Vr[idx1:idx2], Vt[idx1:idx2], Vn[idx1:idx2], Np[idx1:idx2], dt, dj,magnetosheath=True)
+		scale, coi, sig_m, sig_c, sig_r = helicity(Br[idx1:idx2], Bt[idx1:idx2], Bn[idx1:idx2], Vr[idx1:idx2], Vt[idx1:idx2], Vn[idx1:idx2], Np[idx1:idx2], dt)
 
 		# CONDITIONS: >10*dt, <3 hours
 		idx_max = np.where(scale<(3*60*60))[0]
@@ -194,6 +146,7 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 				eventList_interval['sigr'] = sigr
 				eventList = pd.concat([eventList, eventList_interval],axis=0,ignore_index=True)
 			plt.close()
+
 	idx1 += 600
 	idx2 = idx1 + 2400
 	idx1,idx2 = gap_checker(Time,idx1,idx2,dt)
@@ -202,13 +155,10 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 eventList = eventList.round({'sigm':3, 'duration':5, 'B_avg':5, 'B_max':5, 'beta_avg':5, 'V_avg':5, 'T_avg':5, 'Np_avg':5, 'scale_length':5, 'sigc':3, 'sigr':3})
 eventList = eventList.drop_duplicates()
 eventList.sort_values('start', axis=0, ascending=True, inplace=True, kind='quicksort', ignore_index=True)
-# print('All events...')
-# print(eventList)
 
 # DROP EVENTS WITH THE SAME PEAK TIME
 print('\nEliminating events with same peak time...')
-# eventList.drop_duplicates().drop_duplicates(subset=['peak_time']).reset_index(drop=True,inplace=True)
-# print(eventList)
+eventList.drop_duplicates().drop_duplicates(subset=['peak_time']).reset_index(drop=True,inplace=True)
 
 # ELIMINATE EVENTS THAT OVERLAP
 overlap = len(eventList) +1
@@ -242,8 +192,8 @@ while overlap > len(eventList):
 noOverlap = eventList.copy()
 noOverlap.sort_values('start', axis=0, ascending=True, inplace=True, kind='quicksort', ignore_index=True)
 
-if os.path.isfile(eventFile):
-	eventFile = rootDir + 'mms_events/' + namestr + '_THM' + probe.upper() + '.csv'
+# if os.path.isfile(eventFile):
+# 	eventFile = rootDir + 'themis_events/' + namestr[:-1] + '_THM' + probe.upper() + '.csv'
 
 print(f'\nSaving event list to {eventFile}')
 noOverlap.to_csv(eventFile)

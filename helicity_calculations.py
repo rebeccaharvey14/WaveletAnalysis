@@ -1,7 +1,7 @@
 from pycwt import wavelet
 import numpy as np
 
-def helicity(Bbx,Bby,Bbz,Vx,Vy,Vz,Np,dt,dj,magnetosheath=False):
+def helicity(Bbx,Bby,Bbz,Vx,Vy,Vz,Np,dt):
 
 	# ALFVEN SPEED AND ELSASSER VARIABLES
 	B_vec = np.stack((Bbx, Bby, Bbz))
@@ -11,10 +11,9 @@ def helicity(Bbx,Bby,Bbz,Vx,Vy,Vz,Np,dt,dj,magnetosheath=False):
 	Zminus = V_vec-b #km/s
 
 	# WAVELET TRANSFORMS
-	#dt = 60 #seconds
-	#dj = 0.125
+	dj = 0.125
 	s0 = 2*dt
-	mother = wavelet.Morlet(6) #2.5 Zhao
+	mother = wavelet.Morlet(6)
 
 	Wx_kt, scale, freqs, coi, fft, fftfreqs = wavelet.cwt(Bbx, dt, dj=dj, J=-1, s0=s0, wavelet=mother)
 	Wy_kt, scale, freqs, coi, fft, fftfreqs = wavelet.cwt(Bby, dt, dj=dj, J=-1, s0=s0, wavelet=mother)
@@ -46,20 +45,6 @@ def helicity(Bbx,Bby,Bbz,Vx,Vy,Vz,Np,dt,dj,magnetosheath=False):
 	# MAGNETIC HELICITY
 	Hm = 2*(Wy_kt*np.conj(Wz_kt)).imag	# same as 2(-np.conj(Wy_kt)*Wz_kt).imag
 	sig_m = Hm/(np.abs(Wx_kt)**2 + np.abs(Wy_kt)**2 + np.abs(Wz_kt)**2)
-
-	if magnetosheath:
-		N = len(Vx)
-		localVx = np.empty((scale.size,N))
-		localVy = np.empty((scale.size,N))
-		localVz = np.empty((scale.size,N))
-		for s in range(scale.size):
-			for t in range(N):
-				localVx[s,t] = np.sum(Vx*np.exp(-((t*dt - np.arange(0,N*dt,step=dt))**2)/(2*(scale[s]**2))))
-				localVy[s,t] = np.sum(Vy*np.exp(-((t*dt - np.arange(0,N*dt,step=dt))**2)/(2*(scale[s]**2))))
-				localVz[s,t] = np.sum(Vz*np.exp(-((t*dt - np.arange(0,N*dt,step=dt))**2)/(2*(scale[s]**2))))
-
-		Hm = 2*(localVx*(-np.conj(Wy_kt)*Wz_kt).imag ) #+ localVy*(np.conj(Wz_kt)*Wx_kt).imag + localVz*(np.conj(Wx_kt)*Wy_kt).imag)
-		sig_m = Hm/np.sqrt(localVx**2 + localVy**2 + localVz**2)/(np.abs(Wx_kt)**2 + np.abs(Wy_kt)**2 + np.abs(Wz_kt)**2)
 
 	# CROSS HELICITY
 	Hc = Wbp_kt-Wbm_kt

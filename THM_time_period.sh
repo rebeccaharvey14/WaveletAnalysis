@@ -8,27 +8,23 @@ bs_end='2009-06-20 10:00'
 probe='c'
 year='2009'
 
+####################### Download And Preprocess Data #######################
 ############################################################################
-####################### DOWNLOAD AND PREPROCESS DATA #######################
-############################################################################
-python3 data_THM.py $time_head $time_tail $namestr $probe
+# python data_THM.py $time_head $time_tail $namestr $probe $year
 
-data_dir='/home/rharvey/data/preprocessed/'
-echo Saving data file to ${data_dir}DataFrame_THM${probe^^}${namestr}.csv
 
+####################### Spectrograms & Time Series Plots ###################
 ############################################################################
-####################### SPECTROGRAMS & TIME SERIES PLOTS ###################
-############################################################################
-python3 timeseries_THM.py $time_head $time_tail $namestr $probe $year
-python3 timeseries_THM_bowshock.py $time_head $time_tail $namestr $probe $year
-python3 spectrogram_THM_hourly.py $time_head $time_tail $namestr $probe $year
+# python timeseries_THM.py $time_head $time_tail $namestr $probe $year
+# python timeseries_THM_bowshock.py $time_head $time_tail $namestr $probe $year $bs_start $bs_end
+python spectrogram_THM_hourly.py $time_head $time_tail $namestr $probe $year
 
-############################################################################
-####################### EVENT IDENTIFICATION ###############################
-############################################################################
-python3 events_THM.py $namestr $probe
 
+####################### Event Identification ###############################
 ############################################################################
-####################### REMOVE BOW SHOCK CROSSING (IF APPLICABLE) ##########
+python events_THM.py $namestr $probe
+
+
+################ Remove Bow Shock Crossing (if Applicable) #################
 ############################################################################
-python3 remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year
+# python remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year

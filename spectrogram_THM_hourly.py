@@ -16,195 +16,169 @@ from mpl_toolkits.axes_grid1 import host_subplot
 from helicity_calculations import helicity
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
-###########################################################################
-def nan_checker(array):
-	idx_nans = np.where(np.isnan(array)==True)[0]
-	return idx_nans.size/array.size
-
-def gap_checker(array,idx1,idx2,dt):
-	if idx2 > Time.size:
-		idx2 = Time.size-1
-	elif (Time[idx2]-Time[idx1]) > datetime.timedelta(seconds=3600*3):
-		while (Time[idx2]-Time[idx1]) > datetime.timedelta(seconds=800*dt*3):
-			idx2 -= 1
-	return idx1,idx2
+from functions import nan_checker, gap_checker, get_variables
 ###########################################################################
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
-dataDir = '/home/rharvey/data/preprocessed/'
-datafile = dataDir + 'DataFrame_THM' + probe.upper() + namestr + '.csv'
-eventDir = rootDir + 'themis_events/'
-
-# READ IN DATA
-time_head = sys.argv[1] + ' ' + sys.argv[2]
-time_tail = sys.argv[3] + ' ' + sys.argv[4]
-time_range = [time_head,time_tail]
+time_range = [sys.argv[1] + ' ' + sys.argv[2], sys.argv[3] + ' ' + sys.argv[4]]
 namestr = sys.argv[5]
 probe = sys.argv[6]
 year = sys.argv[7]
 
-# GET EPHEMERIS DATA
-coord = 'gse'
-plane = 'xy'
-km_in_re = 6371.2
+rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+dataFile = '/home/rharvey/data/' + 'data_THM' + probe.upper() + namestr + '.csv'
 
-pyspedas.themis.state(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_pos_gse'])
-[eph_epoch, pos, components] = get_data('th'+probe+'_pos_gse') #km
-x = pos[:,0]/km_in_re
-y = pos[:,1]/km_in_re
-z = pos[:,2]/km_in_re
-
-orbit_Time = np.array([datetime.datetime.utcfromtimestamp(t) for t in eph_epoch]) # dt = 1 min
-orbitTime = np.array([t.strftime('%Y-%m-%d %H:%M:%S.%f') for t in orbit_Time])
-titlestr = np.min(orbit_Time).strftime('%B %d %Y') + ' -- ' + np.max(orbit_Time).strftime('%B %d %Y')
-df_ephem = pd.DataFrame(np.array([x,y,z]).T, index=orbitTime, columns = ['x_gse','y_gse','z_gse'])
-
-# READ IN DATA
-df = pd.read_csv(datafile,index_col=0)
-selected_index = [(df.index >= time_head) & (df.index <= time_tail)][0]
-df = df[selected_index]
-
-Np = df.Np.values
-Bmag = df.Bmag.values
-Tp = df.Tp.values
-Te = df.Te.values
-Time = pd.to_datetime(df.index)
-Vmag = df.Vmag.values
-beta = df.beta.values
-Br = -df.Bx.values
-Bt = -df.By.values
-Bn = df.Bz.values
-Vr = -df.Vx.values
-Vt = -df.Vy.values
-Vn = df.Vz.values
-bx = df.bx.values
-by = df.by.values
-bz = df.bz.values
-bmag = df.bmag.values
-dt = Time[1]-Time[0]
-dt = dt.seconds + dt.microseconds*1e-6
-
-Bx = df.Bx.values
-By = df.By.values
-Bz = df.Bz.values
-Vx = df.Vx.values
-Vy = df.Vy.values
-Vz = df.Vz.values 
-
-epoch = ((Time-pd.Timestamp('1970-01-01')) // pd.Timedelta('1s')).values
-Time = np.array([datetime.datetime.utcfromtimestamp(t) for t in epoch])
+# Read in data file
+Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, bmag, Vmag, Tp, Te, beta, Time, dt = get_variables(dataFile,time_range)
+df = pd.read_csv(dataFile,index_col=0)
+df_inre = df[['x_gse','y_gse','z_gse']]
 time = np.array([t.strftime('%Y-%m-%d %H:%M:%S.%f') for t in Time])
-df_inre = df_ephem.reindex(index=time,method='ffill')
+Br, Bt, Bn = -Bx, -By, Bz
+Vr, Vt, Vn = -Vx, -Vy, Vz
 
-pyspedas.themis.esa(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_peir_en_eflux'])
-e_epoch, energies, flux = get_data('th'+probe+'_peir_en_eflux')
-eTime = np.array([datetime.datetime.utcfromtimestamp(t) for t in e_epoch])
-etime = np.array([t.strftime('%Y-%m-%d %H:%M:%S.%f') for t in eTime])
+idx1 = 0
+idx2 = idx1 + 2400
+while idx1 < Time.size-2400 and idx2 < Time.size:
 
-origcd = os.getcwd()
-# PLOT OF B-FIELD, VELOCITY, DENSITY, TEMPERATURE, BETA, ENERGY
-fig = plt.figure(figsize=(10,14))
-fig.subplots_adjust(hspace=0)
-formatter = matplotlib.dates.DateFormatter('%H:%M')
-if pd.to_datetime(time_head).day == pd.to_datetime(time_tail).day:
-    fig.suptitle(pd.to_datetime(str(time_head)).strftime('%d %B %Y'), fontsize=15, y=0.9)
-else:
-    fig.suptitle(pd.to_datetime(time_head).strftime('%d %B') + '--' +pd.to_datetime(time_tail).strftime('%d %B %Y'),y=0.9, fontsize=15)
+	idx1,idx2 = gap_checker(Time,idx1,idx2,dt)
+	time_head = Time[idx1]
+	time_tail = Time[idx2]
+	print(Time[idx1],Time[idx2])
+
+	# CHECK FOR GAPS
+	if nan_checker(Br[idx1:idx2]) < 0.05 and nan_checker(Vr[idx1:idx2]) < 0.05 and nan_checker(Np[idx1:idx2]) < 0.05:
+
+		# CALCULATE MAGNETIC HELICITY, CROSS HELICITY, AND RESIDUAL ENERGY
+		scale, coi, sig_m, sig_c, sig_r = helicity(Br[idx1:idx2], Bt[idx1:idx2], Bn[idx1:idx2], Vr[idx1:idx2], Vt[idx1:idx2], Vn[idx1:idx2], Np[idx1:idx2], dt)
+
+		# PLOT OF B-FIELD AND NORMALIZED MAGNETIC HELICITY, CROSS HELICITY, & RESIDUAL ENERGY
+		fig = plt.figure(figsize=(10,14))
+		fig.subplots_adjust(hspace=0)
+		formatter = matplotlib.dates.DateFormatter('%H:%M')
+		if pd.to_datetime(time_head).day == pd.to_datetime(time_tail).day:
+		    fig.suptitle(pd.to_datetime(str(time_head)).strftime('%B %d %Y'), fontsize=15, y=0.9)
+		else:
+		    fig.suptitle(pd.to_datetime(time_head).strftime('%B %d %Y') + '--' + pd.to_datetime(time_tail).strftime('%B %d %Y'),y=0.9, fontsize=15)
+
+		choice = plt.cm.jet
+		cbar_ax1 = fig.add_axes([0.91,0.305,0.01,0.095])
+		cbar_ax2 = fig.add_axes([0.91,0.207,0.01,0.095])
+		cbar_ax3 = fig.add_axes([0.91,0.11,0.01,0.095])
+		levels = np.linspace(-1,1,21)
     
-# MAGNETIC FIELD
-ax4 = host_subplot(611)
-p41 = ax4.plot(Time,Bx,color='black', label='$B_X$')
-p42 = ax4.plot(Time,By,color='blue', label='$B_Y$')
-p43 = ax4.plot(Time,Bz,color='red', label='$B_Z$')
-ax4.set_xlim([np.nanmin(Time),np.nanmax(Time)])
-ax4.xaxis.set_major_formatter(formatter)
-ax4.set_ylabel('(a) \n B [nT]', fontsize=15)
-ax4.axes.get_xaxis().set_visible(False)
-leg4 = ax4.legend(bbox_to_anchor=(1.06,0.5), loc='center right', handlelength=0, handletextpad=0, frameon=False, prop={'size': 12}, fontsize=15)
-colors=[p41[0].get_color(),p42[0].get_color(),p43[0].get_color()]
-for color,text in zip(colors,leg4.get_texts()):
-	text.set_color(color)
+		# MAGNETIC HELICITY
+		ax6 = host_subplot(816)
+		cs1 = ax6.contourf(Time[idx1:idx2], scale/60, sig_m, cmap=choice, levels=levels)
+		cbar1 = fig.colorbar(cs1, cax=cbar_ax1)
+		cbar1.ax.set_ylabel('$\\sigma_m$', fontsize=15)
+		ax6.contour(Time[idx1:idx2], scale/60, sig_m, [-0.75,0.75], colors='white')
+		ax6.set_ylabel('(f) \n Scale [min]', fontsize=15)
+		ax6.plot(Time[idx1:idx2],coi/60,'black')
+		ax6.xaxis.set_major_formatter(formatter)
+		ax6.set_yscale('log',base=2)
+		ax6.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
+		ax6.set_xlim([time_head,time_tail])
+		ax6.axes.get_xaxis().set_visible(False)
+		ax6.yaxis.set_major_formatter(ticker.ScalarFormatter())
+		ax6.invert_yaxis()
 
-# VELOCITY
-ax5 = host_subplot(612)
-p51 = ax5.plot(Time,Vx,color='black', label='$V_X$')
-p52 = ax5.plot(Time,Vy,color='blue', label='$V_Y$')
-p53 = ax5.plot(Time,Vz,color='red', label='$V_Z$')
-ax5.set_xlim([np.nanmin(Time),np.nanmax(Time)])
-ax5.xaxis.set_major_formatter(formatter)
-ax5.set_ylabel('(b) \n V [km/s]', fontsize=15)
-ax5.axes.get_xaxis().set_visible(False)
-leg5 = ax5.legend(bbox_to_anchor=(1.06,0.5), loc='center right', handlelength=0, handletextpad=0, frameon=False, prop={'size': 12}, fontsize=15)
-colors=[p51[0].get_color(),p52[0].get_color(),p53[0].get_color()]
-for color,text in zip(colors,leg5.get_texts()):
-	text.set_color(color)
+		# CROSS HELICITY
+		ax7 = host_subplot(817)
+		cs2 = ax7.contourf(Time[idx1:idx2], scale/60, sig_c, cmap=choice,levels=levels)
+		cbar2 = fig.colorbar(cs2, cax=cbar_ax2)
+		cbar2.ax.set_ylabel('$\\sigma_c$', fontsize=15)
+		ax7.contour(Time[idx1:idx2], scale/60, sig_c, [-0.3,0.3], colors='white')
+		ax7.set_ylabel('(g) \n Scale [min]', fontsize=15)
+		ax7.plot(Time[idx1:idx2],coi/60,'black')
+		ax7.xaxis.set_major_formatter(formatter)
+		ax7.set_yscale('log',base=2)
+		ax7.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
+		ax7.set_xlim([time_head,time_tail])
+		ax7.axes.get_xaxis().set_visible(False)
+		ax7.yaxis.set_major_formatter(ticker.ScalarFormatter())
+		ax7.invert_yaxis()
 
-# DENSITY & TEMPERATURE
-ax6 = host_subplot(613)
-p61 = ax6.plot(Time,Np,color='black', label='Np')
-ax7 = ax6.twinx()
-#p62 = ax7.plot(Time,Tp*(1e-6),color='blue', label='T')
-p62 = ax7.plot(Time,Tp/11604.518,color='blue', label='T')
-ax6.set_xlim([np.nanmin(Time),np.nanmax(Time)])
-ax6.xaxis.set_major_formatter(formatter)
-ax6.set_ylabel('(c) \n $N_p$ [cm^-3]', fontsize=15)
-ax7.set_ylabel('T [eV]', fontsize=15)
-#ax7.set_yscale('log',base=10)
-ax6.axes.get_xaxis().set_visible(False)
-leg6 = ax6.legend(loc='best', handlelength=0, handletextpad=0, frameon=False, ncol=2, prop={'size': 12}, fontsize=15) #bbox_to_anchor=(0.9,0.64),
-colors=[p61[0].get_color(),p62[0].get_color()]
-for color,text in zip(colors,leg6.get_texts()):
-	text.set_color(color)
+		# RESIDUAL ENERGY
+		ax8 = host_subplot(818)
+		cs3 = ax8.contourf(Time[idx1:idx2], scale/60, sig_r, cmap=choice, levels=levels)
+		cbar3 = fig.colorbar(cs3, cax=cbar_ax3)
+		cbar3.ax.set_ylabel('$\\sigma_r$', fontsize=15)
+		ax8.set_ylabel('(h) \n Scale [min]', fontsize=15)
+		ax8.plot(Time[idx1:idx2],coi/60,'black')
+		ax8.xaxis.set_major_formatter(formatter)
+		ax8.set_yscale('log',base=2)
+		ax8.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
+		ax8.set_xlim([time_head,time_tail])
+		ax8.yaxis.set_major_formatter(ticker.ScalarFormatter())
+		ax8.invert_yaxis()
 
-# ALFVEN SPEED MAGNITUDE & FLUCTUATIONS
-ax9 = host_subplot(614)
-p91 = ax9.plot(Time,bmag,color='black',label='$V_A$')
-ax10 = ax9.twinx()
-p92 = ax10.plot(Time,Vmag-np.nanmean(Vmag),color='blue',label='$\delta V$')
-ax9.set_xlim([np.nanmin(Time),np.nanmax(Time)])
-ax9.xaxis.set_major_formatter(formatter)
-ax9.set_ylabel('(d) \n $V_A$ [km/s]', fontsize=15)
-Vstring = '|V| - {0:.0f} [km/s]'.format(np.nanmean(Vmag))
-ax10.set_ylabel(r'|V| - <V> [km/s]', fontsize=13) #'V [km/s]'
-ax9.axes.get_xaxis().set_visible(False)
-leg9 = ax9.legend(loc='best', handlelength=0, handletextpad=0, frameon=False, ncol=2, prop={'size': 12}, fontsize=15, labelcolor='linecolor')
-# colors=[p91[0].get_color(),p92[0].get_color()]
-# for color,text in zip(colors,leg9.get_texts()):
-# 	text.set_color(color)
+		ticklabel = []
+		for time_idx in time[np.linspace(idx1,idx2,num=6).astype(int)]:
+			ticklabel.append(time_idx[11:16] + '\n %.2f\n %.2f\n %.2f' %(df_inre['x_gse'][time_idx], df_inre['y_gse'][time_idx], df_inre['z_gse'][time_idx]))
 
-# PLASMA BETA
-ax11 = host_subplot(615)
-p111 = ax11.plot(Time,beta,color='black',label='$\\beta$')
-ax11.set_xlim([np.nanmin(Time),np.nanmax(Time)])
-ax11.xaxis.set_major_formatter(formatter)
-ax11.set_yscale('log',base=10)
-ax11.set_ylabel('(e) \n $\\beta$', fontsize=15)
-ax11.axes.get_xaxis().set_visible(False)
+		ax8.set_xticks(df.index[np.linspace(idx1,idx2,num=6).astype(int)])
+		ax8.set_xticklabels(ticklabel, fontsize=15)
+		ax8.text(-0.05,-0.71,'HH:MM\n X ($R_E$)\n Y ($R_E$)\n Z ($R_E$)',horizontalalignment='right',transform=ax8.transAxes, fontsize=15)
 
-# ION SPECTRA
-ax12 = host_subplot(616)
-levels = np.logspace(3,9,num=50)
-cbar_ax1 = fig.add_axes([0.91,0.111,0.01,0.125]) #[0.91,0.111,0.01,0.11]
-#if int(year) < 2010:
-#	cs1 = ax12.contourf(eTime,flux[0][1:flux.shape[0]], energies.T[1:flux.shape[0]],levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
-#elif year=='2022' and probe=='b':
-#        cs1 = ax12.contourf(eTime,flux[0][1:-16], energies.T[1:-16],levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
-#else:
-cs1 = ax12.contourf(eTime,flux[0][1:-8], energies.T[1:-8],levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
-cbar1 = fig.colorbar(cs1, ticks=np.logspace(3,9,num=7),format=ticker.LogFormatterSciNotation(),cax=cbar_ax1)
-cbar1.ax.set_ylabel('Energy flux\n [eV/(cm$^2$ s sr eV)]', fontsize=15)
-ax12.set_ylabel('(f) \n Ions [eV]', fontsize=15)
-ax12.set_xlim([np.nanmin(Time),np.nanmax(Time)])
-ax12.set_yscale('log',base=10)
+		# MAGNETIC FIELD
+		ax1 = host_subplot(811)
+		p1a = ax1.plot(Time[idx1:idx2],Bx[idx1:idx2],color='black', label='$B_X$')
+		p1b = ax1.plot(Time[idx1:idx2],By[idx1:idx2],color='blue', label='$B_Y$')
+		p1c = ax1.plot(Time[idx1:idx2],Bz[idx1:idx2],color='red', label='$B_Z$')
+		ax1.set_xlim([time_head,time_tail])
+		ax1.xaxis.set_major_formatter(formatter)
+		ax1.set_ylabel('(a) \n B [nT]', fontsize=15)
+		ax1.axes.get_xaxis().set_visible(False)
+		leg1 = ax1.legend(bbox_to_anchor=(1.06,0.5), loc='center right', handlelength=0, handletextpad=0, frameon=False, prop={'size': 12}, fontsize=15, labelcolor='linecolor')
 
-ticklabel = []
-for time_idx in time[np.linspace(0,time.size-1,num=6).astype(int)]:
-	ticklabel.append(time_idx[11:16] + '\n %.2f\n %.2f\n %.2f' %(df_inre['x_gse'][time_idx], df_inre['y_gse'][time_idx], df_inre['z_gse'][time_idx]))
+		# VELOCITY
+		ax2 = host_subplot(812)
+		p2a = ax2.plot(Time[idx1:idx2],Vx[idx1:idx2],color='black', label='$V_X$')
+		p2b = ax2.plot(Time[idx1:idx2],Vy[idx1:idx2],color='blue', label='$V_Y$')
+		p2c = ax2.plot(Time[idx1:idx2],Vz[idx1:idx2],color='red', label='$V_Z$')
+		ax2.set_xlim([time_head,time_tail])
+		ax2.xaxis.set_major_formatter(formatter)
+		ax2.set_ylabel('(b) \n V [km/s]', fontsize=15)
+		ax2.axes.get_xaxis().set_visible(False)
+		leg2 = ax2.legend(bbox_to_anchor=(1.06,0.5), loc='center right', handlelength=0, handletextpad=0, frameon=False, prop={'size': 12}, fontsize=15, labelcolor='linecolor')
 
-ax12.set_xticks(df.index[np.linspace(0,time.size-1,num=6).astype(int)])
-ax12.set_xticklabels(ticklabel,fontsize=15)
-ax12.text(-0.05,-0.54,'HH:MM\n X ($R_E$)\n Y ($R_E$)\n Z ($R_E$)',horizontalalignment='right',transform=ax12.transAxes, fontsize=15)
+		# DENSITY & TEMPERATURE
+		ax3 = host_subplot(813)
+		p3 = ax3.plot(Time[idx1:idx2],Np[idx1:idx2],color='black', label='Np')
+		ax3a = ax3.twinx()
+		p2a = ax3.plot(Time[idx1:idx2],Tp[idx1:idx2]/11604.518,color='blue', label='T')
+		ax3.set_xlim([time_head,time_tail])
+		ax3.xaxis.set_major_formatter(formatter)
+		ax3.set_ylabel('(c) \n $N_p$ [cm$^{-3}$]', fontsize=15)
+		ax3a.set_ylabel('T [eV]', fontsize=15)
+		ax3.axes.get_xaxis().set_visible(False)
+		leg3 = ax3.legend(loc='best', handlelength=0, handletextpad=0, frameon=False, ncol=2, prop={'size': 12}, fontsize=15, labelcolor='linecolor')
 
-plt.savefig(rootDir + '/Plots/timeseries_' + pd.to_datetime(str(time_head)).strftime('%d%m%Y') + '_THM' + probe.upper() + '.png', bbox_inches='tight', dpi=300)
-#plt.show()
-plt.close()
+		# ALFVEN SPEED MAGNITUDE & FLUCTUATIONS
+		ax4 = host_subplot(814)
+		ax4.plot(Time[idx1:idx2],bmag[idx1:idx2],color='black',label='$V_A$')
+		ax4a = ax4.twinx()
+		ax4a.plot(Time[idx1:idx2],Vmag[idx1:idx2]-np.nanmean(Vmag[idx1:idx2]),color='blue',label=r'$\delta V$')
+		ax4.set_xlim([time_head,time_tail])
+		ax4.xaxis.set_major_formatter(formatter)
+		ax4.set_ylabel('(d) \n $V_A$ [km/s]', fontsize=15)
+		ax4a.set_ylabel(r'|V| - <V> [km/s]', fontsize=13)
+		ax4.axes.get_xaxis().set_visible(False)
+		leg4 = ax4.legend(loc='best', handlelength=0, handletextpad=0, frameon=False, ncol=2, prop={'size': 12}, fontsize=15, labelcolor='linecolor')
+
+		# PLASMA BETA
+		ax5 = host_subplot(815)
+		ax5.plot(Time[idx1:idx2],beta[idx1:idx2],color='black',label='$\\beta$')
+		ax5.set_xlim([time_head,time_tail])
+		ax5.xaxis.set_major_formatter(formatter)
+		ax5.set_yscale('log',base=10)
+		ax5.set_ylabel('(e) \n $\\beta$', fontsize=15)
+		ax5.axes.get_xaxis().set_visible(False)
+
+		plt.savefig(rootDir + 'Plots/timeseries_spectrograms' + namestr + '_' + pd.to_datetime(time_head).strftime('%H%M') + '_THM' + probe.upper() + '.png', bbox_inches='tight', dpi=300)
+		#plt.show()
+		plt.close()
+
+	# ADVANCE WINDOW
+	idx1 += 600
+	idx2 = idx1 + 2400
+	idx1,idx2 = gap_checker(Time,idx1,idx2,dt)

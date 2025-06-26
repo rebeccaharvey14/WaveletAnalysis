@@ -1,4 +1,3 @@
-import os
 import sys
 import datetime
 import matplotlib
@@ -10,65 +9,17 @@ from my_functions import find_nearest
 from helicity_calculations import helicity
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
-####################### User defined module #######################
-def nan_checker(array):
-	idx_nans = np.where(np.isnan(array)==True)[0]
-	return idx_nans.size/array.size
-
-def gap_checker(array,idx1,idx2,dt):
-	if idx2 == array.size or idx2>(array.size-20):
-		idx2 = array.size-1
-	elif (array[idx2]-array[idx1]) > datetime.timedelta(seconds=3600*3):
-		while (array[idx2]-array[idx1]) > datetime.timedelta(seconds=3600*3):
-			idx2 -= 1
-		if idx1 == idx2 or idx2-idx1==1: # if there no points
-			idx1 = idx2 + 600
-			idx2 = idx1 + 2400
-	return idx1,idx2
-
-def get_variables(filename, rtn=True):
-	df = pd.read_pickle(filename)
-	dj = 0.125
-	Np = df.Np.values
-	Bmag = df.Bmag.values
-	Tp = df.Tp.values
-	Te = df.Te.values
-	Time = df.index
-	Vmag = df.Vmag.values
-	beta = df.beta.values
-
-	dt = Time[1]-Time[0]
-	dt = dt.seconds + dt.microseconds*1e-6
-
-	if 'rtn':
-		Br = -df.Bx.values
-		Bt = -df.By.values
-		Bn = df.Bz.values
-		Vr = -df.Vx.values
-		Vt = -df.Vy.values
-		Vn = df.Vz.values
-		return Br, Bt, Bn, Vr, Vt, Vn, Np, Bmag, Vmag, Tp, Te, beta, Time, dj, dt
-	else:
-		Bx = df.Bx.values
-		By = df.By.values
-		Bz = df.Bz.values
-		Vx = df.Vx.values
-		Vy = df.Vy.values
-		Vz = df.Vz.values
-		return Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, Vmag, Tp, Te, beta, Time, dj, dt
+from functions import nan_checker, gap_checker, get_variables
 ###########################################################################
 
 # READ IN DATA
 namestr = sys.argv[1]
 probe = sys.argv[2]
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
-data_dir='/home/rharvey/data/preprocessed/'
-
-datafile = dataDir + 'DataFrame_MMS1' + namestr + '.csv'
+dataFile = '/home/rharvey/data/' + 'DataFrame_MMS'+ probe + namestr + '.csv'
 eventFile = rootDir + 'mms_events/' + namestr[:-1] + '_MMS' + probe + '.csv'
 
-Br, Bt, Bn, Vr, Vt, Vn, Np, Bmag, Vmag, Tp, Te, beta, Time, dj, dt = get_variables(datafile,rtn=True)
-
+Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, bmag, Vmag, Tp, Te, beta, Time, dt = get_variables(dataFile,time_range)
 epoch = ((Time-pd.Timestamp('1970-01-01 00:00:00.0000')) / pd.Timedelta('1s')).values
 Time = np.array([datetime.datetime.utcfromtimestamp(t) for t in epoch])
 
@@ -76,8 +27,8 @@ cols = ['start', 'end', 'duration', 'B_avg', 'B_max', 'beta_avg', 'V_avg', 'T_av
 eventList = pd.DataFrame(columns=cols)
 
 idx1 = 0
-idx2 = idx1 + 3*800 #360	#540
-while idx1 < Time.size-3*800 and idx2 < Time.size:
+idx2 = idx1 + 2400
+while idx1 < Time.size-2400 and idx2 < Time.size:
 
 	time_head = Time[idx1]
 	time_tail = Time[idx2]
@@ -89,7 +40,7 @@ while idx1 < Time.size-3*800 and idx2 < Time.size:
 		idx_nans_Np = np.where(np.isnan(Np[idx1:idx2])==True)[0]
 
 		# CALCULATE MAGNETIC HELICITY, CROSS HELICITY, AND RESIDUAL ENERGY
-		scale, coi, sig_m, sig_c, sig_r = helicity(Br[idx1:idx2], Bt[idx1:idx2], Bn[idx1:idx2], Vr[idx1:idx2], Vt[idx1:idx2], Vn[idx1:idx2], Np[idx1:idx2], dt, dj, magnetosheath=False)
+		scale, coi, sig_m, sig_c, sig_r = helicity(Br[idx1:idx2], Bt[idx1:idx2], Bn[idx1:idx2], Vr[idx1:idx2], Vt[idx1:idx2], Vn[idx1:idx2], Np[idx1:idx2], dt)
 
 		# CONDITIONS: >10*dt, <3 hours
 		idx_max = np.where(scale<(3*60*60))[0]
@@ -157,7 +108,7 @@ while idx1 < Time.size-3*800 and idx2 < Time.size:
 									maximum = sig_m[j,k]
 									
 
-						if maximum!=0: # #np.abs(sig_c[max_idx]) < 0.3 and
+						if maximum!=0:
 							max_idx = np.where(sig_m==maximum)
 							scale_arr = np.append(scale_arr, scale[max_idx[0][0]]/60) # minutes
 							scale_length = np.append(scale_length, np.mean(Vmag[idx1:idx2][idx_time])*scale[max_idx[0][0]])#Vmag[max_idx[0][1]]*2*scale[max_idx[0][0]])	# km
@@ -196,7 +147,7 @@ while idx1 < Time.size-3*800 and idx2 < Time.size:
 			plt.close()
 
 	idx1 += 600
-	idx2 = idx1 + 3*800
+	idx2 = idx1 + 2400
 	idx1,idx2 = gap_checker(Time,idx1,idx2,dt)
 
 # ROUND VALUES IN THE EVENT LIST TO 3 DECIMALS
@@ -241,7 +192,7 @@ noOverlap = eventList.copy()
 noOverlap.sort_values('start', axis=0, ascending=True, inplace=True, kind='quicksort', ignore_index=True)
 
 # if os.path.isfile(eventFile):
-# 	eventFile = rootdir + 'mms_events/' + namestr[:-1] + '_MMS1.csv'
+# 	eventFile = rootDir + 'mms_events/' + namestr[:-1] + '_MMS' + probe + '.csv'
 
 print(f'\nSaving event list to {eventFile}')
 noOverlap.to_csv(eventFile)

@@ -8,26 +8,22 @@ namestr='_20171105_20171106'
 # bs_start=
 # bs_end=
 
+######################## Download & Preprocess Data ########################
 ############################################################################
-####################### DOWNLOAD AND PREPROCESS DATA #######################
-############################################################################
-python3 data_MMS.py $time_head $time_tail $namestr $probe
+#python data_MMS.py $time_head $time_tail $namestr $probe $year
 
-data_dir='/home/rharvey/data/preprocessed/'
-echo Saving data file to ${data_dir}DataFrame_MMS1${namestr}.csv
 
+####################### Spectrograms & Time Series Plots ###################
 ############################################################################
-####################### SPECTROGRAMS & TIME SERIES PLOTS ###################
-############################################################################
-python3 timeseries_MMS.py $time_head $time_tail $namestr $probe $year
-python3 spectrogram_MMS_hourly.py $time_head $time_tail $namestr $probe $year
+# python timeseries_MMS.py $time_head $time_tail $namestr $probe $year
+# python spectrogram_MMS_hourly.py $time_head $time_tail $namestr $probe $year
 
-############################################################################
-####################### EVENT IDENTIFICATION ###############################
-############################################################################
-python3 events_MMS.py $namestr $probe
 
+####################### Event Identification ###############################
 ############################################################################
-####################### REMOVE BOW SHOCK CROSSING (IF APPLICABLE) ##########
+python events_MMS.py $namestr $probe
+
+
+################ Remove Bow Shock Crossing (if Applicable) #################
 ############################################################################
-python3 remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year
+#python remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year
