@@ -10,20 +10,20 @@ namestr='_20171105_20171106'
 
 ######################## Download & Preprocess Data ########################
 ############################################################################
-#python data_MMS.py $time_head $time_tail $namestr $probe $year
+python data_MMS.py $time_head $time_tail $namestr $probe $year
 
 
 ####################### Spectrograms & Time Series Plots ###################
 ############################################################################
-# python timeseries_MMS.py $time_head $time_tail $namestr $probe $year
-# python spectrogram_MMS_hourly.py $time_head $time_tail $namestr $probe $year
+python timeseries_MMS.py $time_head $time_tail $namestr $probe $year
+python spectrogram_MMS_hourly.py $time_head $time_tail $namestr $probe $year
 
 
 ####################### Event Identification ###############################
 ############################################################################
-python events_MMS.py $namestr $probe
+python events_MMS.py $time_head $time_tail $namestr $probe
 
 
 ################ Remove Bow Shock Crossing (if Applicable) #################
 ############################################################################
-#python remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year
+python remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year

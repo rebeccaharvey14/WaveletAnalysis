@@ -10,21 +10,21 @@ year='2009'
 
 ####################### Download And Preprocess Data #######################
 ############################################################################
-# python data_THM.py $time_head $time_tail $namestr $probe $year
+python data_THM.py $time_head $time_tail $namestr $probe $year
 
 
 ####################### Spectrograms & Time Series Plots ###################
 ############################################################################
-# python timeseries_THM.py $time_head $time_tail $namestr $probe $year
-# python timeseries_THM_bowshock.py $time_head $time_tail $namestr $probe $year $bs_start $bs_end
+python timeseries_THM.py $time_head $time_tail $namestr $probe $year
+python timeseries_THM_bowshock.py $time_head $time_tail $namestr $probe $year $bs_start $bs_end
 python spectrogram_THM_hourly.py $time_head $time_tail $namestr $probe $year
 
 
 ####################### Event Identification ###############################
 ############################################################################
-python events_THM.py $namestr $probe
+python events_THM.py $time_head $time_tail $namestr $probe
 
 
 ################ Remove Bow Shock Crossing (if Applicable) #################
 ############################################################################
-# python remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year
+python remove_bowshock_crossing.py $namestr $probe $bs_start $bs_end $year

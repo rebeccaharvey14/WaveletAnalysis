@@ -174,7 +174,7 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 		ax5.set_ylabel('(e) \n $\\beta$', fontsize=15)
 		ax5.axes.get_xaxis().set_visible(False)
 
-		plt.savefig(rootDir + 'Plots/timeseries_spectrograms' + namestr + '_' + pd.to_datetime(time_head).strftime('%H%M') + '_THM' + probe.upper() + '.png', bbox_inches='tight', dpi=300)
+		plt.savefig(rootDir + 'Plots/timeseries_spectrograms_' + pd.to_datetime(time_head).strftime('%Y%m%d_%H%M') + '_THM' + probe.upper() + '.png', bbox_inches='tight', dpi=300)
 		#plt.show()
 		plt.close()
 

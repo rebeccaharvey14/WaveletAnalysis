@@ -1,20 +1,20 @@
 import sys
 import pandas as pd
 ###########################################################################
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis'
+rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
 
 namestr = sys.argv[1]
 probe = sys.argv[2]
-bs_start = sys.argv[3]
-bs_end = sys.argv[4]
-year = sys.argv[5]
+bs_start = sys.argv[3] + ' ' + sys.argv[4]
+bs_end = sys.argv[5] + ' ' + sys.argv[6]
+year = sys.argv[7]
 
 if probe.isalpha():
-    filename = rootDir + 'themis_events/' + namestr[:-1] + '_THM' + probe.upper() + '.csv'
+    filename = rootDir + 'events/events' + namestr + '_THM' + probe.upper() + '.csv'
 else:
-    filename = rootDir + 'mms_events/' + namestr[:-1] + '_MMS' + probe + '.csv'
+    filename = rootDir + 'events/events' + namestr + '_MMS' + probe + '.csv'
 
-# EXCLUDE BOW SHOCK CROSSING
+# Exclude Bow Shock Crossing
 eventFile = pd.read_csv(filename,index_col=0)
 print('Excluding the time between a bow shock crossing...')
 before_DF = eventFile.where(eventFile['end'] < bs_start).dropna(subset=['start', 'end', 'duration', 'B_avg', 'B_max', 'beta_avg', 'V_avg', 'T_avg', 'Np_avg', 'scale_length', 'peak_time', 'sigm', 'sigc', 'sigr'])
