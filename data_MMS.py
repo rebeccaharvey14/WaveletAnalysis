@@ -11,7 +11,6 @@ time_tail = sys.argv[3] + ' ' + sys.argv[4]
 time_range = [time_head,time_tail]
 namestr = sys.argv[5]
 probe = sys.argv[6]
-year = sys.argv[7]
 
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_MMS'+ probe + namestr + '.csv'
@@ -44,7 +43,7 @@ Vmag =  np.array([np.sqrt(u[i][0]**2 + u[i][1]**2 + u[i][2]**2) for i in range(V
 # Proton and electron temperature
 Tp = np.empty(Temp.shape[0])
 for i in range(Temp.shape[0]):
-    Tp[i] = np.trace(Temp[i])/3*11604.518    # eV --> K
+    Tp[i] = np.trace(Temp[i])/3*11604.518        # eV --> K
     if 'mms'+probe+'_des_temptensor_gse_fast' in variables:
         Te[i] = np.trace(Temp_e[i])/3*11604.518  # eV --> K
 
@@ -65,7 +64,7 @@ VGSE = u[selected_index]
 Np = Np[selected_index]
 Tp = Tp[selected_index]
 Vmag = Vmag[selected_index]
-if 'mms'+probe+'_des_temptensor_gse_fast' in variables:
+if 'Te' in locals():
     Te = Te[selected_index]
 
 # Time cadence
@@ -81,13 +80,13 @@ BGSE_DataFrame = pd.DataFrame(np.column_stack(BGSE.T), index = BTime, columns = 
 VGSE_DataFrame = pd.DataFrame(np.column_stack((VGSE,Vmag)), index = VTime, columns = ['Vx', 'Vy', 'Vz', 'Vmag']).resample(f'{dt}S').mean()
 Np_DataFrame = pd.DataFrame(Np, index = VTime, columns = ['Np']).resample(f'{dt}S').mean()
 Tp_DataFrame = pd.DataFrame(Tp, index = VTime, columns = ['Tp']).resample(f'{dt}S').mean()
-if 'mms'+probe+'_des_temptensor_gse_fast' in variables:
+if 'Te' in locals():
     Te_DataFrame = pd.DataFrame(Te, index = VTime, columns = ['Te']).resample(f'{dt}S').mean()
 
 # Alfven speed & magnitude, Thermal & Magnetic Pressure, Plasma Beta
 print('Putting bGSE, beta into DataFrame...')
 bGSE_DataFrame = (1e-9)*BGSE_DataFrame.div(np.sqrt(4*np.pi*Np_DataFrame['Np']*(1.67e-27)*(1e-1)),axis=0).rename(columns={'Bx':'bx','By':'by','Bz':'bz','Bmag':'bmag'})*(1e-3)
-if 'mms'+probe+'_des_temptensor_gse_fast' in variables:
+if 'Te' in locals():
     p_DataFrame = Tp_DataFrame.add(Te_DataFrame['Te'],axis=0).mul(Np_DataFrame['Np']*(1.3806e-17),axis=0).rename(columns={'Tp':'p'})
 else:
     p_DataFrame = Tp_DataFrame.mul(Np_DataFrame['Np']*(1.3806e-17),axis=0).rename(columns={'Tp':'p'})
@@ -101,7 +100,7 @@ beta_DataFrame = p_DataFrame.div(((BGSE_DataFrame['Bmag']*(1e-9))**2)/2/(4*np.pi
 print('Getting ephemeris data...')
 km_in_re = 6371.2
 pyspedas.mms.mms_load_mec(probe=probe, trange=time_range, time_clip=True, varformat='*_r_gse')
-[eph_epoch, pos] = get_data('mms' + probe + '_mec_r_gse') #km
+[eph_epoch, pos] = get_data('mms' + probe + '_mec_r_gse') # km
 x = pos[:,0]/6371.2
 y = pos[:,1]/6371.2
 z = pos[:,2]/6371.2
@@ -115,7 +114,7 @@ xyz_GSE = xyz_GSE.resample(f'{dt}S').mean().interpolate(method='linear')
 ####################################################################
 print('Merging all DataFrames...')
 DataFrame = pd.DataFrame(index=BGSE_DataFrame.index)
-if 'mms'+probe+'_des_temptensor_gse_fast' in variables:
+if 'Te' in locals():
     DataFrame = pd.concat([DataFrame, BGSE_DataFrame, VGSE_DataFrame, Np_DataFrame, Tp_DataFrame, Te_DataFrame, bGSE_DataFrame, beta_DataFrame, xyz_GSE], axis=1)
 else:
     DataFrame = pd.concat([DataFrame, BGSE_DataFrame, VGSE_DataFrame, Np_DataFrame, Tp_DataFrame,bGSE_DataFrame, beta_DataFrame, xyz_GSE], axis=1)

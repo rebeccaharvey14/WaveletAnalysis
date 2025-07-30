@@ -11,47 +11,76 @@ time_head = sys.argv[1] + ' ' + sys.argv[2]
 time_tail = sys.argv[3] + ' ' + sys.argv[4]
 time_range = [time_head,time_tail]
 namestr = sys.argv[5]
-probe = sys.argv[6]
+probe_str = sys.argv[6]
+probe = probe_str[4].lower()
 
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
-dataFile = '/home/rharvey/data/' + 'data_THM'+ probe.upper() + namestr + '.csv'
+dataFile = '/home/rharvey/data/' + 'data' + probe_str + namestr + '.csv'
 
 datetimeStart = datetime.strptime(time_head,'%Y-%m-%d %H:%M')
 datetimeEnd   = datetime.strptime(time_tail,'%Y-%m-%d %H:%M')
 
-######################### FGM measurements #########################
-print('Getting FGM (magnetic field) data...')
-pyspedas.themis.fgm(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_fgs_gse','th'+probe+'_fgs_btotal'])
-[B_epoch, b_gse_vec, components] = get_data('th'+probe+'_fgs_gse') # nT
-[B_epoch, Btot] = get_data('th'+probe+'_fgs_btotal') # nT
-Bmag = np.array([np.sqrt(b_gse_vec[i][0]**2 + b_gse_vec[i][1]**2 + b_gse_vec[i][2]**2) for i in range(B_epoch.size)])
+######################### magnetic field #########################
+print('Getting magnetic field data...')
+if probe_str[:-1]=='_THM':
+    pyspedas.themis.fgm(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_fgs_gse', 'th'+probe+'_fgs_btotal'])
+    [B_epoch, b_gse_vec, components] = get_data('th'+probe+'_fgs_gse') # nT
+    [B_epoch, Btot] = get_data('th'+probe+'_fgs_btotal')               # nT
+    Bmag = np.array([np.sqrt(b_gse_vec[i][0]**2 + b_gse_vec[i][1]**2 + b_gse_vec[i][2]**2) for i in range(B_epoch.size)])
+else:
+    pyspedas.mms.mms_load_fgm(probe=probe, trange=time_range, varformat='*_b_gse_srvy',time_clip=True)
+    [B_epoch, b_gse_vec] = get_data('th'+probe+'_fgm_b_gse_srvy_l2')   # nT
 
-######################### ESA measurements #########################
-print('Getting ESA (velocity, density, temperature) data...')
-pyspedas.themis.esa(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_peir_velocity_gse','th'+probe+'_peif_velocity_gse','th'+probe+'_peir_density','th'+probe+'_peer_density','th'+probe+'_peir_avgtemp','th'+probe+'_peer_avgtemp'])
-[V_epoch, Np] = get_data('th'+probe+'_peir_density')                    # cm^-3
-[V_epoch, Npe] = get_data('th'+probe+'_peer_density')                   # cm^-3
-# Proton and electron temperature
-[T_epoch, Tp] = get_data('th'+probe+'_peir_avgtemp')                    # eV
-Tp *= 11604.518                                                         # eV --> K
-[e_epoch, Te] = get_data('th'+probe+'_peer_avgtemp')                    # eV
-Te *= 11604.518                                                         # eV --> K
 
-[V_epoch, u, components] = get_data('th'+probe+'_peir_velocity_gse')    # km/s
-if nan_checker(u[:,0]) > 0.05:
-    [V_epoch, u, components] = get_data('th'+probe+'_peif_velocity_gse')# km/s
-Vmag = np.array([np.sqrt(u[i][0]**2 + u[i][1]**2 + u[i][2]**2) for i in range(V_epoch.size)])
-print(u)
+######################### plasma data #########################
+print('Getting plasma (velocity, density, temperature) data...')
+if probe_str[:-1]=='_THM':
+    pyspedas.themis.esa(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_peir_velocity_gse','th'+probe+'_peif_velocity_gse','th'+probe+'_peir_density','th'+probe+'_peer_density','th'+probe+'_peir_avgtemp','th'+probe+'_peer_avgtemp'])
+    [V_epoch, Np] = get_data('th'+probe+'_peir_density')                     # cm^-3
+    [V_epoch, Npe] = get_data('th'+probe+'_peer_density')                    # cm^-3
+    
+    # Proton and electron temperature
+    [T_epoch, Tp] = get_data('th'+probe+'_peir_avgtemp')                     # eV
+    Tp *= 11604.518                                                          # eV --> K
+    [e_epoch, Te] = get_data('th'+probe+'_peer_avgtemp')                     # eV
+    Te *= 11604.518                                                          # eV --> K
+    includeTe = True
+
+    [V_epoch, u, components] = get_data('th'+probe+'_peir_velocity_gse')     # km/s
+    if nan_checker(u[:,0]) > 0.05:
+        [V_epoch, u, components] = get_data('th'+probe+'_peif_velocity_gse') # km/s
+    Vmag = np.array([np.sqrt(u[i][0]**2 + u[i][1]**2 + u[i][2]**2) for i in range(V_epoch.size)])
+else:
+    variables = pyspedas.mms.mms_load_fpi(probe=probe, trange=time_range, time_clip=True,center_measurement=True)
+    [V_epoch, u] = get_data('mms'+probe+'_dis_bulkv_gse_fast')               # km/s
+    [V_epoch, Np] = get_data('mms'+probe+'_dis_numberdensity_fast')          # cm^-3
+    [V_epoch, Temp] = get_data('mms'+probe+'_dis_temptensor_gse_fast')       # eV
+    if 'mms'+probe+'_des_numberdensity_fast' in variables:
+        [V_epoch, Npe] = get_data('mms'+probe+'_des_numberdensity_fast')     # cm^-3
+        [V_epoch, Temp_e] = get_data('mms'+probe+'_des_temptensor_gse_fast') # eV
+        Te = np.empty(Temp_e.shape[0])
+    Vmag =  np.array([np.sqrt(u[i][0]**2 + u[i][1]**2 + u[i][2]**2) for i in range(V_epoch.size)])
+
+    # Proton and electron temperature
+    Tp = np.empty(Temp.shape[0])
+    for i in range(Temp.shape[0]):
+        Tp[i] = np.trace(Temp[i])/3*11604.518                          # eV --> K
+        if 'mms'+probe+'_des_temptensor_gse_fast' in variables:
+            Te[i] = np.trace(Temp_e[i])/3*11604.518                    # eV --> K
+            e_epoch = T_epoch
+            includeTe = True
+
 
 ####################################################################
 # Trim data to specified range
 ####################################################################
 print('Trimming data to specified time range...')
-BTime = np.array([datetime.utcfromtimestamp(t) for t in B_epoch])
+BTime          = np.array([datetime.utcfromtimestamp(t) for t in B_epoch])
 selected_index = [(BTime> datetimeStart) & (BTime < datetimeEnd)][0]
-BTime = BTime[selected_index]
-BGSE = b_gse_vec[selected_index]
-Bmag = Bmag[selected_index]
+BTime          = BTime[selected_index]
+BGSE           = b_gse_vec[selected_index]
+if probe_str[:-1]=='_THM':
+    Bmag       = Bmag[selected_index]
 
 TTime = np.array([datetime.utcfromtimestamp(t) for t in T_epoch])
 selected_index = [(TTime > datetimeStart) & (TTime < datetimeEnd)][0]
@@ -78,11 +107,15 @@ dt = round(dt.seconds + dt.microseconds*1e-6,4)
 # Put data into DataFrame
 ####################################################################
 print('Putting BGSE, VGSE, Np, Tp (Te) into DataFrame...')
-BGSE_DataFrame = pd.DataFrame(np.column_stack((BGSE,Bmag)), index = BTime, columns = ['Bx', 'By', 'Bz', 'Bmag']).resample(f'{dt}S').mean()
+if probe_str[:-1]=='_THM':
+    BGSE_DataFrame = pd.DataFrame(np.column_stack((BGSE,Bmag)), index = BTime, columns = ['Bx', 'By', 'Bz', 'Bmag']).resample(f'{dt}S').mean()
+else:
+    BGSE_DataFrame = pd.DataFrame(np.column_stack(BGSE.T), index = BTime, columns = ['Bx', 'By', 'Bz', 'Bmag']).resample(f'{dt}S').mean()
 VGSE_DataFrame = pd.DataFrame(np.column_stack((VGSE,Vmag)), index = VTime, columns = ['Vx', 'Vy', 'Vz', 'Vmag']).resample(f'{dt}S').mean()
 Np_DataFrame = pd.DataFrame(Np, index = TTime, columns = ['Np']).resample(f'{dt}S').mean()
 Tp_DataFrame = pd.DataFrame(Tp, index = TTime, columns = ['Tp']).resample(f'{dt}S').mean()
-Te_DataFrame = pd.DataFrame(Te, index = eTime, columns = ['Te']).resample(f'{dt}S').mean()
+if 'Te' in locals():
+    Te_DataFrame = pd.DataFrame(Te, index = eTime, columns = ['Te']).resample(f'{dt}S').mean()
 
 # Alfven speed & magnitude, Thermal & Magnetic Pressure, Plasma Beta
 print('Putting bGSE, beta into DataFrame...')
@@ -99,8 +132,13 @@ beta_DataFrame = p_DataFrame.div(((BGSE_DataFrame['Bmag']*(1e-9))**2)/2/(4*np.pi
 # Get spacecraft location
 ####################################################################
 print('Getting ephemeris data...')
-pyspedas.themis.state(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_pos_gse'])
-[eph_epoch, pos, components] = get_data('th'+probe+'_pos_gse') #km
+if probe_str[:-1]=='_THM':
+    pyspedas.themis.state(probe=probe, trange=time_range, time_clip=True, varnames=['th'+probe+'_pos_gse'])
+    [eph_epoch, pos, components] = get_data('th'+probe+'_pos_gse') # km
+else:
+    pyspedas.mms.mms_load_mec(probe=probe, trange=time_range, time_clip=True, varformat='*_r_gse')
+    [eph_epoch, pos, components] = get_data('mms'+probe+'_pos_gse') # km
+
 x = pos[:,0]/6371.2
 y = pos[:,1]/6371.2
 z = pos[:,2]/6371.2

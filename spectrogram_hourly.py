@@ -1,4 +1,3 @@
-import os
 import sys
 import datetime
 import matplotlib
@@ -20,11 +19,12 @@ from functions import nan_checker, gap_checker, get_variables
 ###########################################################################
 
 time_range = [sys.argv[1] + ' ' + sys.argv[2], sys.argv[3] + ' ' + sys.argv[4]]
-namestr = sys.argv[5]
-probe = sys.argv[6]
+namestr    = sys.argv[5]
+probe_str  = sys.argv[6]
+probe      = probe_str[4].lower()
 
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
-dataFile = '/home/rharvey/data/' + 'data_MMS1' + namestr + '.csv'
+dataFile = '/home/rharvey/data/' + 'data' + probe_str + namestr + '.csv'
 
 # Read in data file
 Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, bmag, Vmag, Tp, Te, beta, Time, dt = get_variables(dataFile,time_range)
@@ -41,15 +41,14 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 	idx1,idx2 = gap_checker(Time,idx1,idx2,dt)
 	time_head = Time[idx1]
 	time_tail = Time[idx2]
-	print(Time[idx1],Time[idx2])
 
 	# CHECK FOR GAPS
 	if nan_checker(Br[idx1:idx2]) < 0.05 and nan_checker(Vr[idx1:idx2]) < 0.05 and nan_checker(Np[idx1:idx2]) < 0.05:
 
-		# Calculate Magnetic Helicity, Cross Helicity, And Residual Energy
+		# CALCULATE MAGNETIC HELICITY, CROSS HELICITY, AND RESIDUAL ENERGY
 		scale, coi, sig_m, sig_c, sig_r = helicity(Br[idx1:idx2], Bt[idx1:idx2], Bn[idx1:idx2], Vr[idx1:idx2], Vt[idx1:idx2], Vn[idx1:idx2], Np[idx1:idx2], dt)
 
-		# Plot of B-Field and Normalized Magnetic Helicity, Cross Helicity, & Residual Energy
+		# PLOT OF B-FIELD AND NORMALIZED MAGNETIC HELICITY, CROSS HELICITY, & RESIDUAL ENERGY
 		fig = plt.figure(figsize=(10,14))
 		fig.subplots_adjust(hspace=0)
 		formatter = matplotlib.dates.DateFormatter('%H:%M')
@@ -58,66 +57,6 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 		else:
 		    fig.suptitle(pd.to_datetime(time_head).strftime('%B %d %Y') + '--' + pd.to_datetime(time_tail).strftime('%B %d %Y'),y=0.9, fontsize=15)
 
-		choice = plt.cm.jet
-		cbar_ax1 = fig.add_axes([0.91,0.305,0.01,0.095])
-		cbar_ax2 = fig.add_axes([0.91,0.207,0.01,0.095])
-		cbar_ax3 = fig.add_axes([0.91,0.11,0.01,0.095])
-		levels = np.linspace(-1,1,21)
-
-		# MAGNETIC HELICITY
-		ax6 = host_subplot(816)
-		cs1 = ax6.contourf(Time[idx1:idx2], scale/60, sig_m, cmap=choice, levels=levels)
-		cbar1 = fig.colorbar(cs1, cax=cbar_ax1)
-		cbar1.ax.set_ylabel('$\\sigma_m$', fontsize=15)
-		ax6.contour(Time[idx1:idx2], scale/60, sig_m, [-0.75,0.75], colors='white')
-		ax6.set_ylabel('(f) \n Scale [min]', fontsize=15)
-		ax6.plot(Time[idx1:idx2],coi/60,'black')
-		ax6.xaxis.set_major_formatter(formatter)
-		ax6.set_yscale('log',base=2)
-		ax6.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
-		ax6.set_xlim([time_head,time_tail])
-		ax6.axes.get_xaxis().set_visible(False)
-		ax6.yaxis.set_major_formatter(ticker.ScalarFormatter())
-		ax6.invert_yaxis()
-
-		# CROSS HELICITY
-		ax7 = host_subplot(817)
-		cs2 = ax7.contourf(Time[idx1:idx2], scale/60, sig_c, cmap=choice,levels=levels)
-		cbar2 = fig.colorbar(cs2, cax=cbar_ax2)
-		cbar2.ax.set_ylabel('$\\sigma_c$', fontsize=15)
-		ax7.contour(Time[idx1:idx2], scale/60, sig_c, [-0.3,0.3], colors='white')
-		ax7.set_ylabel('(g) \n Scale [min]', fontsize=15)
-		ax7.plot(Time[idx1:idx2],coi/60,'black')
-		ax7.xaxis.set_major_formatter(formatter)
-		ax7.set_yscale('log',base=2)
-		ax7.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
-		ax7.set_xlim([time_head,time_tail])
-		ax7.axes.get_xaxis().set_visible(False)
-		ax7.yaxis.set_major_formatter(ticker.ScalarFormatter())
-		ax7.invert_yaxis()
-
-		# RESIDUAL ENERGY
-		ax8 = host_subplot(818)
-		cs3 = ax8.contourf(Time[idx1:idx2], scale/60, sig_r, cmap=choice, levels=levels)
-		cbar3 = fig.colorbar(cs3, cax=cbar_ax3)
-		cbar3.ax.set_ylabel('$\\sigma_r$', fontsize=15)
-		ax8.set_ylabel('(h) \n Scale [min]', fontsize=15)
-		ax8.plot(Time[idx1:idx2],coi/60,'black')
-		ax8.xaxis.set_major_formatter(formatter)
-		ax8.set_yscale('log',base=2)
-		ax8.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
-		ax8.set_xlim([time_head,time_tail])
-		ax8.yaxis.set_major_formatter(ticker.ScalarFormatter())
-		ax8.invert_yaxis()
-
-		ticklabel = []
-		for time_idx in time[np.linspace(idx1,idx2,num=6).astype(int)]:
-			ticklabel.append(time_idx[11:16] + '\n %.2f\n %.2f\n %.2f' %(df_inre['x_gse'][time_idx[:-3]], df_inre['y_gse'][time_idx[:-3]], df_inre['z_gse'][time_idx[:-3]]))
-
-		ax8.set_xticks(df.index[np.linspace(idx1,idx2,num=6).astype(int)])
-		ax8.set_xticklabels(ticklabel, fontsize=15)
-		ax8.text(-0.05,-0.71,'HH:MM\n X ($R_E$)\n Y ($R_E$)\n Z ($R_E$)',horizontalalignment='right',transform=ax8.transAxes, fontsize=15)
-		
 		# MAGNETIC FIELD
 		ax1 = host_subplot(811)
 		p1a = ax1.plot(Time[idx1:idx2],Bx[idx1:idx2],color='black', label='$B_X$')
@@ -172,6 +111,66 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 		ax5.set_yscale('log',base=10)
 		ax5.set_ylabel('(e) \n $\\beta$', fontsize=15)
 		ax5.axes.get_xaxis().set_visible(False)
+
+		choice = plt.cm.jet
+		cbar_ax1 = fig.add_axes([0.91,0.305,0.01,0.095])
+		cbar_ax2 = fig.add_axes([0.91,0.207,0.01,0.095])
+		cbar_ax3 = fig.add_axes([0.91,0.11,0.01,0.095])
+		levels = np.linspace(-1,1,21)
+    
+		# MAGNETIC HELICITY
+		ax6 = host_subplot(816)
+		cs1 = ax6.contourf(Time[idx1:idx2], scale/60, sig_m, cmap=choice, levels=levels)
+		cbar1 = fig.colorbar(cs1, cax=cbar_ax1)
+		cbar1.ax.set_ylabel('$\\sigma_m$', fontsize=15)
+		ax6.contour(Time[idx1:idx2], scale/60, sig_m, [-0.75,0.75], colors='white')
+		ax6.set_ylabel('(f) \n Scale [min]', fontsize=15)
+		ax6.plot(Time[idx1:idx2],coi/60,'black')
+		ax6.xaxis.set_major_formatter(formatter)
+		ax6.set_yscale('log',base=2)
+		ax6.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
+		ax6.set_xlim([time_head,time_tail])
+		ax6.axes.get_xaxis().set_visible(False)
+		ax6.yaxis.set_major_formatter(ticker.ScalarFormatter())
+		ax6.invert_yaxis()
+
+		# CROSS HELICITY
+		ax7 = host_subplot(817)
+		cs2 = ax7.contourf(Time[idx1:idx2], scale/60, sig_c, cmap=choice,levels=levels)
+		cbar2 = fig.colorbar(cs2, cax=cbar_ax2)
+		cbar2.ax.set_ylabel('$\\sigma_c$', fontsize=15)
+		ax7.contour(Time[idx1:idx2], scale/60, sig_c, [-0.3,0.3], colors='white')
+		ax7.set_ylabel('(g) \n Scale [min]', fontsize=15)
+		ax7.plot(Time[idx1:idx2],coi/60,'black')
+		ax7.xaxis.set_major_formatter(formatter)
+		ax7.set_yscale('log',base=2)
+		ax7.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
+		ax7.set_xlim([time_head,time_tail])
+		ax7.axes.get_xaxis().set_visible(False)
+		ax7.yaxis.set_major_formatter(ticker.ScalarFormatter())
+		ax7.invert_yaxis()
+
+		# RESIDUAL ENERGY
+		ax8 = host_subplot(818)
+		cs3 = ax8.contourf(Time[idx1:idx2], scale/60, sig_r, cmap=choice, levels=levels)
+		cbar3 = fig.colorbar(cs3, cax=cbar_ax3)
+		cbar3.ax.set_ylabel('$\\sigma_r$', fontsize=15)
+		ax8.set_ylabel('(h) \n Scale [min]', fontsize=15)
+		ax8.plot(Time[idx1:idx2],coi/60,'black')
+		ax8.xaxis.set_major_formatter(formatter)
+		ax8.set_yscale('log',base=2)
+		ax8.set_ylim(bottom=1,top=np.floor(np.max(scale)/60))
+		ax8.set_xlim([time_head,time_tail])
+		ax8.yaxis.set_major_formatter(ticker.ScalarFormatter())
+		ax8.invert_yaxis()
+
+		ticklabel = []
+		for time_idx in time[np.linspace(idx1,idx2,num=6).astype(int)]:
+			ticklabel.append(time_idx[11:16] + '\n %.2f\n %.2f\n %.2f' %(df_inre['x_gse'][time_idx], df_inre['y_gse'][time_idx], df_inre['z_gse'][time_idx]))
+
+		ax8.set_xticks(df.index[np.linspace(idx1,idx2,num=6).astype(int)])
+		ax8.set_xticklabels(ticklabel, fontsize=15)
+		ax8.text(-0.05,-0.71,'HH:MM\n X ($R_E$)\n Y ($R_E$)\n Z ($R_E$)',horizontalalignment='right',transform=ax8.transAxes, fontsize=15)
 
 		plt.savefig(rootDir + 'Plots/timeseries_spectrograms_' + pd.to_datetime(time_head).strftime('%Y%m%d_%H%M') + probe_str + '.png', bbox_inches='tight', dpi=300)
 		#plt.show()
