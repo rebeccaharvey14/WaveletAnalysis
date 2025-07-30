@@ -23,9 +23,8 @@ time_tail = sys.argv[3] + ' ' + sys.argv[4]
 time_range = [time_head,time_tail]
 namestr = sys.argv[5]
 probe = sys.argv[6]
-year = sys.argv[7]
-bs_start = sys.argv[8] + ' ' + sys.argv[9]
-bs_end = sys.argv[10] + ' ' + sys.argv[11]
+bs_start = sys.argv[7] + ' ' + sys.argv[8]
+bs_end = sys.argv[9] + ' ' + sys.argv[10]
 
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_THM' + probe.upper() + namestr + '.csv'

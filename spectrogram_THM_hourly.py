@@ -22,7 +22,6 @@ from functions import nan_checker, gap_checker, get_variables
 time_range = [sys.argv[1] + ' ' + sys.argv[2], sys.argv[3] + ' ' + sys.argv[4]]
 namestr = sys.argv[5]
 probe = sys.argv[6]
-year = sys.argv[7]
 
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_THM' + probe.upper() + namestr + '.csv'

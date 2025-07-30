@@ -12,14 +12,13 @@ register_matplotlib_converters()
 from functions import nan_checker, gap_checker, get_variables
 ###########################################################################
 
-# READ IN DATA
 time_range = [sys.argv[1] + ' ' + sys.argv[2], sys.argv[3] + ' ' + sys.argv[4]]
 namestr = sys.argv[5]
 probe = sys.argv[6]
 
 rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_MMS'+ probe + namestr + '.csv'
-eventFile = rootDir + 'events/events' + namestr + '_MMS' + probe + '.csv'
+eventFile = rootDir + 'Events/wavelet_events' + namestr + '_MMS' + probe + '.csv'
 
 # Read in data file
 Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, bmag, Vmag, Tp, Te, beta, Time, dt = get_variables(dataFile,time_range)
@@ -195,9 +194,6 @@ while overlap > len(eventList):
 
 noOverlap = eventList.copy()
 noOverlap.sort_values('start', axis=0, ascending=True, inplace=True, kind='quicksort', ignore_index=True)
-
-# if os.path.isfile(eventFile):
-# 	eventFile = rootDir + 'events/events' + namestr + '_MMS' + probe + '.csv'
 
 print(f'\nSaving event list to {eventFile}')
 noOverlap.to_csv(eventFile)
