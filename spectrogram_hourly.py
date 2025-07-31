@@ -23,7 +23,7 @@ namestr    = sys.argv[5]
 probe_str  = sys.argv[6]
 probe      = probe_str[4].lower()
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data' + probe_str + namestr + '.csv'
 
 # Read in data file

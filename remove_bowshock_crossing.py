@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 ###########################################################################
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 
 namestr    = sys.argv[1]
 probe_str  = sys.argv[2]

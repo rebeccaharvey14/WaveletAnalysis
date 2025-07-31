@@ -26,7 +26,7 @@ probe = sys.argv[6]
 bs_start = sys.argv[7] + ' ' + sys.argv[8]
 bs_end = sys.argv[9] + ' ' + sys.argv[10]
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_THM' + probe.upper() + namestr + '.csv'
 
 # Read in data file

@@ -12,16 +12,18 @@ time_range = [time_head,time_tail]
 namestr = sys.argv[5]
 probe = sys.argv[6]
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_MMS'+ probe + namestr + '.csv'
 
 datetimeStart = datetime.strptime(time_head,'%Y-%m-%d %H:%M')
 datetimeEnd   = datetime.strptime(time_tail,'%Y-%m-%d %H:%M')
 
-# fr_log_bufsize = 1 # 0 means unbuffered, 1 means line buffered.
-# fr_log_path_filename = rootDir + 'fr' + namestr + '.log'
-# fr_log = open(fr_log_path_filename, 'w', fr_log_bufsize)
-# sys.stdout = fr_log
+'''
+fr_log_bufsize = 1 # 0 means unbuffered, 1 means line buffered.
+fr_log_path_filename = rootDir + 'fr' + namestr + '.log'
+fr_log = open(fr_log_path_filename, 'w', fr_log_bufsize)
+sys.stdout = fr_log
+'''
 
 ######################### FGM measurements #########################
 print('Getting FGM (magnetic field) data...')

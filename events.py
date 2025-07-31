@@ -17,7 +17,7 @@ time_range = [sys.argv[1] + ' ' + sys.argv[2], sys.argv[3] + ' ' + sys.argv[4]]
 namestr = sys.argv[5]
 probe_str = sys.argv[6]
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data'+ probe_str + namestr + '.csv'
 eventFile = rootDir + '/Events/wavelet_events' + namestr + probe_str + '.csv'
 

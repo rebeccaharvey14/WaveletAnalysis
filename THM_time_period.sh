@@ -31,7 +31,7 @@ python remove_bowshock_crossing.py $namestr '_THM'$probe $bs_start $bs_end
 
 
 # Save detection output files
-origin_dir=/home/rharvey/Documents/Research/Wavelet-Analysis/Events/wavelet_events$namestr_THM$probe.csv
+origin_dir=/home/rharvey/Documents/Wavelet-Analysis/Events/wavelet_events$namestr_THM$probe.csv
 destination_dir=/home/rharvey/Events/wavelet_events$namestr_THM$probe.csv
 echo Saving final event list file to $destination_dir
 cp $origin_dir $destination_dir

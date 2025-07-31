@@ -23,8 +23,8 @@ time_range = [sys.argv[1] + ' ' + sys.argv[2], sys.argv[3] + ' ' + sys.argv[4]]
 namestr = sys.argv[5]
 probe = sys.argv[6]
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
-dataFile = '/home/rharvey/data/' + 'data_MMS1' + namestr + '.csv'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
+dataFile = '/home/rharvey/data/' + 'data_MMS' + probe + namestr + '.csv'
 
 # Read in data file
 Bx, By, Bz, Vx, Vy, Vz, Np, Bmag, bmag, Vmag, Tp, Te, beta, Time, dt = get_variables(dataFile,time_range)
@@ -173,7 +173,7 @@ while idx1 < Time.size-2400 and idx2 < Time.size:
 		ax5.set_ylabel('(e) \n $\\beta$', fontsize=15)
 		ax5.axes.get_xaxis().set_visible(False)
 
-		plt.savefig(rootDir + 'Plots/timeseries_spectrograms_' + pd.to_datetime(time_head).strftime('%Y%m%d_%H%M') + probe_str + '.png', bbox_inches='tight', dpi=300)
+		plt.savefig(rootDir + 'Plots/timeseries_spectrograms_' + pd.to_datetime(time_head).strftime('%Y%m%d_%H%M') + '_MMS' + probe + '.png', bbox_inches='tight', dpi=300)
 		#plt.show()
 		plt.close()
 

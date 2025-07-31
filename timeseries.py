@@ -25,7 +25,7 @@ namestr    = sys.argv[5]
 probe_str  = sys.argv[6]
 probe      = probe_str[4].lower()
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data' + probe_str + namestr + '.csv'
 
 # Read in data file
@@ -113,8 +113,10 @@ ax6 = host_subplot(616)
 levels = np.logspace(3,9,num=50)
 cbar_ax = fig.add_axes([0.91,0.111,0.01,0.125])
 
-#cs = ax6.contourf(eTime,flux[0], energies.T, levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
-cs = ax6.contourf(eTime,flux[0][1:-8], energies.T[1:-8], levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
+if probe_str[:-1]=='_THM':
+    cs = ax6.contourf(eTime,flux[0][1:-8], energies.T[1:-8], levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
+else:
+    cs = ax6.contourf(eTime,flux[0], energies.T, levels=levels, locator=ticker.LogLocator(), cmap=plt.cm.nipy_spectral)
 
 cbar = fig.colorbar(cs, ticks=np.logspace(3,9,num=7),format=ticker.LogFormatterSciNotation(),cax=cbar_ax)
 cbar.ax.set_ylabel('Energy flux\n [eV/(cm$^2$ s sr eV)]', fontsize=15)

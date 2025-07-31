@@ -24,7 +24,7 @@ time_range = [time_head,time_tail]
 namestr = sys.argv[5]
 probe = sys.argv[6]
 
-rootDir = '/home/rharvey/Documents/Research/Wavelet-Analysis/'
+rootDir = '/home/rharvey/Documents/Wavelet-Analysis/'
 dataFile = '/home/rharvey/data/' + 'data_MMS' + probe + namestr + '.csv'
 
 # Read in data file
